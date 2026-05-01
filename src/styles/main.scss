@@ -187,11 +187,14 @@ a {
   }
   .block-excerpts {
     flex: 1;
+    min-height: 0;
+    max-height: calc(1.6em * 10);
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 8;
-    line-clamp: 8;
+    -webkit-line-clamp: 10;
+    line-clamp: 10;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
   .block-excerpt {
     font-size: 1rem;

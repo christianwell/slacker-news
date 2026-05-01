@@ -17,7 +17,7 @@ const overrideHeadline = site.headlineOverride
   ? posts.find((post) => post.slug === site.headlineOverride)
   : undefined;
 const headline = overrideHeadline ?? allNews[0];
-const headlineExcerpts = headline?.paragraphs.slice(0, headline?.leadingImage ? 1 : 2) ?? [];
+const headlineExcerpts = headline?.paragraphs ?? [];
 
 const displayOpinion = posts.filter((post) => post.category === "opinion").slice(0, 3);
 
