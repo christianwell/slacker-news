@@ -81,6 +81,7 @@ const acknowledgements = await getAcknowledgements();
             <a href={post.url} class="opinion-item">
               <h3 class="opinion-title">{post.title}</h3>
               <p class="opinion-excerpt">{truncateWords(post.excerpt, 18)}</p>
+              <span class="reading-time">{post.readingTime} min read</span>
             </a>
             {index < displayOpinion.length - 1 && <hr class="opinion-divider" />}
           </>
@@ -95,6 +96,7 @@ const acknowledgements = await getAcknowledgements();
         <a href={post.url} class="front-block story-block">
           <h3 class="story-block-title">{post.title}</h3>
           <p class="story-block-excerpt">{truncateWords(post.excerpt, 18)}</p>
+          <span class="reading-time">{post.readingTime} min read</span>
         </a>
       ))}
     </div>
@@ -110,6 +112,7 @@ const acknowledgements = await getAcknowledgements();
             <a href={post.url} class="front-block story-block essay-block">
               <h3 class="story-block-title">{post.title}</h3>
               <p class="story-block-excerpt">{truncateWords(post.excerpt, 18)}</p>
+              <span class="reading-time">{post.readingTime} min read</span>
             </a>
           ))}
         </div>

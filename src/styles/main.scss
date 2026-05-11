@@ -243,6 +243,9 @@ a {
     margin: 0;
     line-height: 1.5;
   }
+  .reading-time {
+    margin-top: 5px;
+  }
 }
 
 .opinion-divider {
@@ -266,6 +269,16 @@ a {
     margin: 0;
     line-height: 1.5;
   }
+}
+
+.reading-time {
+  display: block;
+  font-size: 0.72rem;
+  color: #888;
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: Georgia, serif;
 }
 
 // ─── Changelog block ──────────────────────────────────────────────────────────

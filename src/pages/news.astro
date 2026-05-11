@@ -15,6 +15,7 @@ const newsPosts = (await getPosts()).filter((post) => post.category === "news");
         <a href={post.url} class="front-block story-block">
           <h3 class="story-block-title">{post.title}</h3>
           <p class="story-block-excerpt">{truncateWords(post.excerpt, 18)}</p>
+          <span class="reading-time">{post.readingTime} min read</span>
         </a>
       ))}
     </div>

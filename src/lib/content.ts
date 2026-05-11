@@ -25,6 +25,7 @@ export type Post = {
     date: Date;
     excerpt: string;
     paragraphs: string[];
+    readingTime: number;
     leadingImage?: {
         src: string;
         alt: string;
@@ -239,6 +240,8 @@ export async function getPosts(): Promise<Post[]> {
                     : [entry.data.followUpTo]
                 : undefined;
 
+            const wordCount = paragraphs.reduce((sum, p) => sum + p.split(/\s+/).filter(Boolean).length, 0);
+
             return {
                 slug: entry.id,
                 url: `/${entry.id}/`,
@@ -249,6 +252,7 @@ export async function getPosts(): Promise<Post[]> {
                 date: entry.data.date,
                 excerpt: toExcerpt({ body: entry.body!, data: entry.data }),
                 paragraphs,
+                readingTime: Math.max(1, Math.ceil(wordCount / 200)),
                 leadingImage,
                 entry,
                 responseTo,
