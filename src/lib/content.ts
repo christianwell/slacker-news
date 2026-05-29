@@ -177,6 +177,15 @@ function extractImageFromBlock(block: string): { src: string; alt: string } | un
     };
 }
 
+function isTableBlock(block: string): boolean {
+    return block.split("\n").some((line) => /^\s*\|?[\s\-:|]+\|[\s\-:|]+\|?\s*$/.test(line) && /-/.test(line));
+}
+
+function isListBlock(block: string): boolean {
+    const listLines = block.split("\n").filter((line) => /^\s*([-*+]|\d+\.)\s+/.test(line));
+    return listLines.length >= 2;
+}
+
 function extractTextBlocks(body: string): string[] {
     const blocks = getBodyBlocks(body);
     const leadingImage = extractImageFromBlock(blocks[0] ?? "");
@@ -186,6 +195,8 @@ function extractTextBlocks(body: string): string[] {
         .filter((block) => {
             if (/^#{1,6}\s+/.test(block.trim())) return false;
             if (/^[=-]{3,}\s*$/.test(block.trim())) return false;
+            if (isTableBlock(block)) return false;
+            if (isListBlock(block)) return false;
             return true;
         })
         .map((block) => stripMarkdown(block))
