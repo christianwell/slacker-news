@@ -128,7 +128,7 @@ function stripMarkdown(input: string): string {
             .replace(/^export\s.+$/gm, "")
             .replace(/^#{1,6}\s+/gm, "")
             .replace(/^\s*[-*+]\s+/gm, "")
-            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
+            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "")
             .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
             .replace(/`([^`]+)`/g, "$1")
             .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -197,6 +197,7 @@ function extractTextBlocks(body: string): string[] {
             if (/^[=-]{3,}\s*$/.test(block.trim())) return false;
             if (isTableBlock(block)) return false;
             if (isListBlock(block)) return false;
+            if (/^<Caption[\s>]/i.test(block.trim())) return false;
             return true;
         })
         .map((block) => stripMarkdown(block))
