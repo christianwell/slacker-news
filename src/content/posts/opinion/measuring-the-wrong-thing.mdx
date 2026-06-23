@@ -1,0 +1,52 @@
+---
+title: Measuring the Wrong Thing
+date: 2026-06-22
+author: "Villarante"
+responseTo: "news/gender-identity-at-hackclub"
+---
+import Caption from "../../../components/Caption.astro";
+
+*Editor's note: this piece was submitted pseudonymously*
+
+![A three-panel Dilbert comic strip where a character asks for advice about unreachable "Ed" who has needed data; Dogbert suggests fabricating the data like everyone else does; in the final panel, the character defiantly asks "Are you doubting my data?](https://cdn.hackclub.com/019ef070-750d-7ce1-be06-13e6b33676e6/x.jpg)
+
+<Caption>A three-panel Dilbert comic strip where a character asks for advice about unreachable "Ed" who has needed data; Dogbert suggests fabricating the data like everyone else does; in the final panel, the character defiantly asks "Are you doubting my data?</Caption>
+
+
+Hello, I am back for another article, this time directly replying to another Slacker News article about a gender study done by Evan and Zach. Many years ago, I took a statistics class, so we learned about the importance of conducting good studies to answer real questions. Let's dig into this together.
+
+Say Ivan and Jack want to count the left-handed people in a crowd, but they aren't allowed to just ask directly. So they use a shortcut. Almost everyone wears their watch on the hand they *don't* write with, which means right-handers wear it on the left wrist and left-handers wear it on the right. So they figure: count the watches on right wrists, and you've counted the lefties.
+
+Except, it's not that simple. Plenty of right-handed people wear their watch on the right anyway, out of habit or just style, and some lefties wear theirs on the left like everyone else. So Ivan and Jack catch a few real lefties, wrongly tag a bunch of righties, and miss every left-handed person who wears their watch the ordinary way. To check their work, they compare the list against the handful of left-handed friends they have and nudge it until it looks about right. Then they announce: 4% of the crowd is left-handed.
+
+But they actually never measured handedness. They measured *unusual watch placement*, which overlaps with being left-handed a little and is otherwise a completely different thing. "4%" describes where people wear their watches, not which hand they write with.
+
+I want to briefly dig into the issues with measuring here, but not dwell on it since some people have already pointed out the issues (especially that one meta thread, bravo to the author of that, sorry that the replies tanked in terms of reasoning)
+
+The study never measured gender identity. It measured the gap between what genderize.io thinks your name is and what you said you are, and called that gap "transgender." Those are not the same thing. A cis girl named Alex can already break this. A transfem who already ships under her real name would count as a female self-ID, but is filed away as cis. The further along you are, the more invisible you become, which means the one bucket that would actually be interesting is built to miss the people. The meta author said this better than I can, and added the part I'd have missed: if someone ships under one name and later under another, the database sees two strangers instead of one person, so their hours get split across genders and the headcount quietly inflates. Stack that on top of decimal-point percentages the method cannot support (72.1, really?) and a comparison to a US national figure that counts people, not shipped hours, and you have a table that feels more precise than it really is.
+
+But let's not dogpile on clear methodology issues and zoom out and ask, "What does this actually teach us?"
+
+Research should be done to either a) prove an existing point or b) uncover new information. This failed at both.
+
+When you spend any time doing basic surface-level research, you can find some easy ball knowledge.
+
+* Tech is a mostly [cis-male dominated field](https://ia.acs.org.au/article/2025/is-gender-parity-in-tech-still-worth-the-effort-.html)
+* Women and Queer people have [historically been a minority.](https://pmc.ncbi.nlm.nih.gov/articles/PMC10187482/)
+* The United States leads, with India in second place for Hack Club participation when it comes to [Cloudflare Data](https://traffic.3kh0.net/countries)
+
+Let's use the fact "Hack Club is mostly boys" as an example. We don't need an API to tell us this; we just know it is a fact. The study claims that 72.1% of hours come from cis boys, which sounds like validation, but proving a point means putting it on firmer ground than it stood on before, and this study does not. The 72 to 18 split withstands the study's flaws because the gap is too big to rig, and no amount of genderizing errors can turn this landslide into a tie. We can only trust this number because of how large the gap is, not because the method is any good. You also can't call the method good for the numbers you liked and bad for the ones you didn't. If it was unreliable enough to wreck the trans count, it was never reliable enough to "prove" the boys count. The study didn't prove anything new with better proof, it just restated something everyone knew with a fat asterisk on it.
+
+Now for b) uncover new information. The new information would be the smaller numbers, how many trans kids, how many nonbinary kids, the precise figure for girls. That's the part we genuinely didn't know walking in, and it's exactly the part the method can't answer. A transfem shipping under her real name reads as cis. One person shipping under two names reads as two people in two buckets. The numbers most likely to be new are the numbers most thoroughly mangled, and a number you can't trust isn't data, it's a guess dressed up as a neat table.
+
+There was a version of (b) that would have worked, but the study completely missed the mark. Here is the thing about a flawed measurement: it can still tell you something real, as long as you take it the same flawed way more than once. If the method always undercounts trans kids by roughly the same amount, that error mostly cancels out when you compare two points in time. You don't need the number to be right; you just need the mistake to be consistent.
+
+That is what makes a trajectory worth more than a snapshot. "Girls are 18% of hours" tells you almost nothing on its own. "Girls went from 15% to 18% in a year, measured the same way both times" tells you the work to bring more girls in is actually working, and that is genuinely new information, even with a strange method. The study even set this up: it called the Stasis figure a "pre-intervention baseline" but then never followed up with a post-intervention measurement.
+
+This study failing at both objectives is a net negative, because people will treat it as a success. Someone commented we're only a couple points off the national rate, so we're probably fine. But this is a study that taught us nothing, being used to answer a question we should have kept digging for. The reassurance is fake because the method that produced it can't see the people it's supposed to be about. "4%, close to Pew, moving on" is the worst outcome if you actually care whether trans and nonbinary kids can show up here and stay.
+
+Doing good studies is not too hard if you just ask one question that this study never asks: what decision is this number supposed to inform? If you can't find a good answer, this is not "research"; it's just a random number.
+
+The meta author put it best, so I'll borrow it here: the database can see where you started and where you ended up. It just can't see that it's the same journey. Neither can a single snapshot of a community. We never needed a study to learn that Hack Club is mostly boys. We needed one to learn if that's changing, and for whom. That study still hasn't been run.
+
+Thank you all for reading my posts, it is nice to see them being used and discussed in the Slack.
