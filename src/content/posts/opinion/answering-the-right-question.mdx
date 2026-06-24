@@ -1,0 +1,77 @@
+---
+date: 2026-06-24
+author: "@Raygen Rupe"
+title: "On Answering the Right Question"
+responseTo:
+  - "news/gender-identity-at-hackclub"
+  - "opinion/measuring-the-wrong-thing"
+---
+
+Hi! I'm Raygen, your local hardware hack clubber and statistics nerd. I spent 2 years leading my FRC team's scouting team in the past, where I was responsible for one of, if not the most comprehensive scouting system in FIRST capable of telling you *literally everything a robot did in a game with very high accuracy*. I love data.
+
+That's, frankly, an insane amount of data. It led my team to do a lot of thinking, notably: what could we derive from that data? One of my biggest takeaways from that (and the couple statistics classes I've been in) has been to ask an important question: **What are you trying to measure?**
+
+This sounds similar to Villarante's article, and it somewhat is. The thing is, Villarante never answered the question of "What are you trying to measure?" Villarante discussed the question "How are you measuring your data?"
+
+These are separate questions. To summarize Villarante's article, he proposes that the study measured the gap between what genderize.io thinks your identity is from your name and the delta between what you state you are. I agree with the issues Villarante has identified about this methodology, but I also have done enough studies that I understand why this is the methodology used. From exclusively the data that is in Unified, this is a half-decent methodology and I can't think of a better one. It's not ideal and it does misrepresent things a tad, but as long as it's the only methodological flaw, it's fine enough.
+
+Villarante goes on to say that it would be better to measure trends over time. I agree with this some, but I still believe the mark is being missed.
+
+Let's pretend, for a moment, that no studies have been taken. How do we make one? Well, the answer is a series of questions. We first ask a question: "What do we want to know?" The answer to this question is "The quantity of an identity in Hack Club".
+
+This is good. We now know what the conclusion we want is. We then determine that figuring out the representation of an identity means figuring out the amount of hours they've shipped to Unified. There's also some thoughts about how to count transgender individuals after this, but it's not what I want to point out.
+
+Here's a color-coded flowchart showcasing how the study is come up with and how it functions.
+
+![](https://cdn.hackclub.com/019efa3a-b1af-7339-95e9-ce6b7ad5d1ea/image.png)
+
+There's something not right here, though. There's an extra blue box that is fundamentally changing the study and the answer given: trying to fix a failure mode. This was intentional. To quote the original article from zrl & eps:
+
+> After determining gender identity (more on that in a moment) we found each identity's percentage of hours shipped rather than percentage of people who are in the DB. This avoids the failure mode where groups superficially appear to be equal, when in reality one group is participating 10x more than another group.
+
+The best way to explain what's going on is an example.
+
+Assume that Unified has a total of 10 Hack Clubber projects in it. 9 of these are from cis girls and 1 of them is from a cis guy. Each cis girl spent 1 hour on their project, while the cis guy spent 100 hours. I'm excluding transgender individuals from this for the sake of easier math. Here's this represented as a table:
+
+| Identity | Individual | Hours Spent |
+|----------|------------|-------------|
+| Cis Girl | Person 1   | 1           |
+| Cis Girl | Person 2   | 1           |
+| Cis Girl | Person 3   | 1           |
+| Cis Girl | Person 4   | 1           |
+| Cis Girl | Person 5   | 1           |
+| Cis Girl | Person 6   | 1           |
+| Cis Girl | Person 7   | 1           |
+| Cis Girl | Person 8   | 1           |
+| Cis Girl | Person 9   | 1           |
+| Cis Guy  | Person 10  | 100         |
+
+If we do the math, 90% of the populace in my Unified Mini table is made up of cis girls. There is 109 total hours contributed by all identities. Let's also account for the failure mode proposed by zrl & eps, by finding the percentage that each identity has contributed to Unified Mini. For cis girls, this is ~8.2%. For cis guys, this is ~91.7%. Congratulations, 91.7% of Unified Mini is cis guys!
+
+Wait, what just happened? What's going on here? We've just changed the question we're answering.
+
+This has not given us the representation of each identity in Unified Mini, it's given us the *contribution* of each identity. It answers the question "How much does each identity contribute to Unified?" but it does not answer the question of "What is the percentage of an identity in Hack Club?". This is still useful data, but very separate questions with separate answers. This is a stacked bar chart showcasing the difference:
+
+![Chart showcasing 'Percentage of hours' on the left and 'Percentage of populace on the right'](https://cdn.hackclub.com/019efa3f-3680-7fed-bb94-8924b7e1ad03/chrome_kitdx60j3m.png)
+
+<em><sup>I apologize to all dark mode users, and I blame Google Sheets.</sup></em>
+
+Here's my preferred study. It boils down to focusing on the representation of the populace, then deriving data from that.
+
+![](https://cdn.hackclub.com/019efa3a-b479-743d-94f8-525639f88fe2/image.png)
+
+There's a lot more data available here. This version of the study is able to provide:
+
+- The contribution by identity in Unified (old, existing data)
+- The actual percentage of an identity in Unified (new data)
+- Average hour count per project (new data)
+- Average hours per capita for each subgroup (new data)
+  - Can be split by identity
+  - "Trans girls each on average spend 8 hours per project"
+- Average project count per capita for each subgroup (new data)
+  - Can be split by identity
+  - "Cis girls on average make 3 projects each"
+
+A note: I've suggested deduplicating names. Unified might have my name in it 5 times, so we need to only count my name once or else we might not have the right data. In an ideal world this would also be able to account for a transgender individual changing their name, but I believe we shouldn't try to track the changes in people's identity for privacy.
+
+Evan is right when he says that if you want truth, you have to forget perfection. You just need to ensure that your truth is even the right one. You can't measure the weather with a scale, and you can't measure an identity by how many hours it's worked.
