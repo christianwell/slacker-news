@@ -19,3 +19,4 @@ review-import.json
 .env.development
 .env.test
 .env.production
+.vercel
