@@ -6,6 +6,7 @@ import { Constants, EdgeTTS } from "@andresaya/edge-tts";
 const VOICE = "en-GB-RyanNeural";
 const CONTENT_DIRECTORY = resolve("src/content/posts");
 const OUTPUT_DIRECTORY = resolve("public/article-audio");
+const CACHE_ORIGIN = process.env.ARTICLE_AUDIO_CACHE_ORIGIN ?? "https://slacker-news.christianwell.xyz";
 
 type TimedWord = {
   word: string;
@@ -55,7 +56,39 @@ async function sourceFiles(directory: string): Promise<string[]> {
   return files.flat();
 }
 
-async function generateArticle(path: string): Promise<"generated" | "cached" | "empty"> {
+async function restoreDeployedAudio(
+  slug: string,
+  hash: string,
+  directory: string,
+  manifestPath: string,
+): Promise<boolean> {
+  try {
+    const manifestUrl = new URL(`/article-audio/${slug}/manifest.json`, CACHE_ORIGIN);
+    const manifestResponse = await fetch(manifestUrl);
+    if (!manifestResponse.ok) return false;
+
+    const manifest = await manifestResponse.json() as AudioManifest;
+    if (manifest.hash !== hash || !manifest.chunks.length) return false;
+
+    const audioFiles = await Promise.all(manifest.chunks.map(async (chunk) => {
+      if (chunk.audio.includes("/") || chunk.audio.includes("\\")) {
+        throw new Error("Invalid cached audio filename");
+      }
+      const response = await fetch(new URL(chunk.audio, manifestUrl));
+      if (!response.ok) throw new Error(`Cached audio returned ${response.status}`);
+      return { name: chunk.audio, data: Buffer.from(await response.arrayBuffer()) };
+    }));
+
+    await mkdir(directory, { recursive: true });
+    await Promise.all(audioFiles.map((audio) => writeFile(resolve(directory, audio.name), audio.data)));
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function generateArticle(path: string): Promise<"generated" | "restored" | "cached" | "empty"> {
   const slug = relative(CONTENT_DIRECTORY, path).replace(/\.mdx$/, "");
   const text = articleText(await readFile(path, "utf8"));
   if (!text) return "empty";
@@ -69,6 +102,10 @@ async function generateArticle(path: string): Promise<"generated" | "cached" | "
     if (manifest.hash === hash) return "cached";
   } catch {
     // This article has not been generated yet.
+  }
+
+  if (await restoreDeployedAudio(slug, hash, directory, manifestPath)) {
+    return "restored";
   }
 
   await mkdir(directory, { recursive: true });
@@ -106,6 +143,7 @@ if (requestedSlugs.size) {
   files = files.filter((path) => requestedSlugs.has(relative(CONTENT_DIRECTORY, path).replace(/\.mdx$/, "")));
 }
 let generated = 0;
+let restored = 0;
 let cached = 0;
 let nextFile = 0;
 
@@ -118,9 +156,10 @@ async function generateNextArticle() {
     const result = await generateArticle(path);
     console.log(`[${index + 1}/${files.length}] ${slug}: ${result}`);
     if (result === "generated") generated += 1;
+    if (result === "restored") restored += 1;
     if (result === "cached") cached += 1;
   }
 }
 
 await Promise.all(Array.from({ length: Math.min(3, files.length) }, generateNextArticle));
-console.log(`Article audio ready: ${generated} generated, ${cached} cached.`);
+console.log(`Article audio ready: ${generated} generated, ${restored} restored, ${cached} locally cached.`);
