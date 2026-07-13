@@ -80,6 +80,7 @@ const followUpLinks =
         {
           post.author && (
             <span class="story-author">
+              <ArticleReader manifestUrl={`/article-audio/${post.slug}/manifest.json`} />
               By <AuthorList authors={post.author} slackIds={post.authorSlackIds} />
             </span>
           )
@@ -150,8 +151,6 @@ const followUpLinks =
         </div>
       )
     }
-
-    <ArticleReader />
 
     <div id="story-body" class="story-body">
       <Content />

@@ -1,62 +1,66 @@
-<section class="article-reader" aria-labelledby="article-reader-title">
-  <div class="article-reader-heading">
-    <h2 id="article-reader-title">Listen to this article</h2>
-    <p class="article-reader-voice">
-      Voice: <span data-reader-voice>Loading…</span>
-    </p>
-  </div>
+---
+interface Props {
+  manifestUrl: string;
+}
 
-  <div class="article-reader-controls">
-    <button type="button" data-reader-listen disabled>Listen / restart</button>
-    <button type="button" data-reader-pause disabled>Pause</button>
-    <button type="button" data-reader-stop disabled>Stop</button>
-    <label>
-      Speed
-      <select data-reader-speed disabled>
-        <option value="0.75">0.75×</option>
-        <option value="1" selected>1×</option>
-        <option value="1.25">1.25×</option>
-        <option value="1.5">1.5×</option>
-        <option value="2">2×</option>
-      </select>
-    </label>
-  </div>
+const { manifestUrl } = Astro.props;
+---
 
-  <p class="article-reader-status" data-reader-status aria-live="polite">
-    Loading text-to-speech…
+<section class="article-reader" aria-label="Article reader" data-manifest-url={manifestUrl}>
+  <button
+    type="button"
+    data-reader-toggle
+    data-state="loading"
+    aria-label="Loading article audio"
+    title="Loading article audio"
+    disabled
+  >
+    <svg class="play-icon" viewBox="0 0 12 14" aria-hidden="true">
+      <path d="M1 1.2v11.6L11 7 1 1.2Z"></path>
+    </svg>
+    <svg class="pause-icon" viewBox="0 0 12 14" aria-hidden="true">
+      <path d="M1.5 1h3v12h-3zM7.5 1h3v12h-3z"></path>
+    </svg>
+  </button>
+  <p class="article-reader-details">
+    <span data-reader-status aria-live="polite">Loading article audio…</span>
+    <span aria-hidden="true"> &middot; </span>
+    <span data-reader-voice>Loading voice…</span>
   </p>
 </section>
 
 <script>
-  import type { ESpeakEngine, ESpeakEvent } from "@echogarden/espeak-ng-emscripten";
-
   const reader = document.querySelector<HTMLElement>(".article-reader");
   const article = document.querySelector<HTMLElement>("#story-body");
 
   if (reader && article) {
-    const listenButton = reader.querySelector<HTMLButtonElement>("[data-reader-listen]")!;
-    const pauseButton = reader.querySelector<HTMLButtonElement>("[data-reader-pause]")!;
-    const stopButton = reader.querySelector<HTMLButtonElement>("[data-reader-stop]")!;
-    const speedSelect = reader.querySelector<HTMLSelectElement>("[data-reader-speed]")!;
+    const toggleButton = reader.querySelector<HTMLButtonElement>("[data-reader-toggle]")!;
     const statusText = reader.querySelector<HTMLElement>("[data-reader-status]")!;
     const voiceText = reader.querySelector<HTMLElement>("[data-reader-voice]")!;
 
     let isReading = false;
     let isPaused = false;
-    let speechRun = 0;
     let highlightedWord: HTMLElement | undefined;
     let wordElements: HTMLElement[] = [];
-    let enginePromise: Promise<ESpeakEngine> | undefined;
-    let audioContext: AudioContext | undefined;
-    let activeSource: AudioBufferSourceNode | undefined;
+    let activeAudio: HTMLAudioElement | undefined;
     let highlightFrame: number | undefined;
+    let currentChunk = 0;
+    let speechRun = 0;
 
-    interface SpeechChunk {
-      text: string;
-      wordIndexes: number[];
-      wordStarts: number[];
+    interface TimedWord {
+      word: string;
+      start: number;
+      end: number;
     }
 
+    interface AudioManifest {
+      voice: string;
+      chunks: Array<{ audio: string; words: TimedWord[] }>;
+    }
+
+    const manifestUrl = reader.dataset.manifestUrl!;
+    let manifest: AudioManifest | undefined;
+    let mappedWords: Array<HTMLElement | undefined>[] = [];
     const excludedContent =
       "figcaption, .caption, button, [role='button'], [aria-hidden='true'], [data-speech-ignore], script, style, noscript, svg";
 
@@ -94,54 +98,17 @@
       }
     }
 
-    function getSpeechChunks() {
-      prepareArticle();
-      const chunks: SpeechChunk[] = [];
-      let chunk: SpeechChunk = { text: "", wordIndexes: [], wordStarts: [] };
-
-      wordElements.forEach((element, wordIndex) => {
-        const word = element.textContent ?? "";
-        const separator = chunk.text ? " " : "";
-        if (chunk.text && chunk.text.length + separator.length + word.length > 420) {
-          chunks.push(chunk);
-          chunk = { text: "", wordIndexes: [], wordStarts: [] };
-        }
-
-        chunk.wordStarts.push(chunk.text.length + (chunk.text ? 1 : 0));
-        chunk.wordIndexes.push(wordIndex);
-        chunk.text += `${chunk.text ? " " : ""}${word}`;
-
-        if (chunk.text.length >= 80 && /[.!?][”’"']?$/.test(word)) {
-          chunks.push(chunk);
-          chunk = { text: "", wordIndexes: [], wordStarts: [] };
-        }
-      });
-
-      if (chunk.text) chunks.push(chunk);
-      return chunks;
-    }
-
     function clearHighlight() {
       highlightedWord?.classList.remove("article-reader-word-active");
       highlightedWord = undefined;
     }
 
-    function highlightBoundary(chunk: SpeechChunk, charIndex: number) {
-      let position = 0;
-      while (
-        position + 1 < chunk.wordStarts.length &&
-        chunk.wordStarts[position + 1] <= charIndex
-      ) {
-        position += 1;
-      }
-
-      const word = wordElements[chunk.wordIndexes[position]];
+    function highlight(word: HTMLElement | undefined) {
       if (word && word !== highlightedWord) {
         clearHighlight();
         highlightedWord = word;
         word.classList.add("article-reader-word-active");
       }
-      return position;
     }
 
     function clearHighlightFrame() {
@@ -149,90 +116,36 @@
       highlightFrame = undefined;
     }
 
-    function getAudioContext() {
-      audioContext ??= new AudioContext();
-      return audioContext;
+    function normalized(word: string) {
+      return word.toLocaleLowerCase("en").replace(/[^\p{L}\p{N}]/gu, "");
     }
 
-    function getEngine() {
-      enginePromise ??= import("@echogarden/espeak-ng-emscripten").then(
-        async ({ default: createESpeakModule }) => {
-          const module = await createESpeakModule();
-          const engine = new module.eSpeakNGWorker();
-          engine.set_voice("en-gb");
-          engine.set_pitch(50);
-          return engine;
-        },
-      );
-      return enginePromise;
+    function mapManifestWords() {
+      prepareArticle();
+      const elements = wordElements.map((element) => normalized(element.textContent ?? ""));
+      let elementIndex = 0;
+      mappedWords = manifest!.chunks.map((chunk) => chunk.words.map(({ word }) => {
+        const target = normalized(word);
+        const match = elements.indexOf(target, elementIndex);
+        if (match < 0) return undefined;
+        elementIndex = match + 1;
+        return wordElements[match];
+      }));
     }
 
-    function synthesizeChunk(engine: ESpeakEngine, chunk: SpeechChunk) {
-      const sampleChunks: Int16Array[] = [];
-      const wordEvents: ESpeakEvent[] = [];
-
-      engine.set_rate(Math.round(175 * Number(speedSelect.value)));
-      engine.synthesize(chunk.text, (samples, events) => {
-        if (samples.length > 0) sampleChunks.push(new Int16Array(samples));
-        wordEvents.push(...events.filter((event) => event.type === "word"));
-        return false;
-      });
-
-      const sampleLength = sampleChunks.reduce((total, samples) => total + samples.length, 0);
-      const context = getAudioContext();
-      const buffer = context.createBuffer(1, sampleLength, engine.samplerate || 22050);
-      const channel = buffer.getChannelData(0);
-      let offset = 0;
-      for (const samples of sampleChunks) {
-        for (let index = 0; index < samples.length; index += 1) {
-          channel[offset + index] = samples[index] / 32768;
-        }
-        offset += samples.length;
+    function updateHighlight(audio: HTMLAudioElement, chunkIndex: number) {
+      if (audio !== activeAudio || audio.paused) return;
+      const words = manifest!.chunks[chunkIndex].words;
+      const wordIndex = words.findLastIndex((word) => word.start <= audio.currentTime);
+      if (
+        wordIndex >= 0 &&
+        (wordIndex < words.length - 1 || audio.currentTime <= words[wordIndex].end)
+      ) {
+        highlight(mappedWords[chunkIndex][wordIndex]);
+      } else {
+        clearHighlight();
       }
-
-      return { buffer, wordEvents };
-    }
-
-    function playChunk(
-      chunk: SpeechChunk,
-      buffer: AudioBuffer,
-      wordEvents: ESpeakEvent[],
-      currentRun: number,
-    ) {
-      return new Promise<void>((resolve) => {
-        const context = getAudioContext();
-        const source = context.createBufferSource();
-        source.buffer = buffer;
-        source.connect(context.destination);
-        activeSource = source;
-
-        let eventIndex = -1;
-        const startedAt = context.currentTime;
-        const updateHighlight = () => {
-          if (currentRun !== speechRun || source !== activeSource) return;
-          const elapsedMilliseconds = (context.currentTime - startedAt) * 1000;
-          while (
-            eventIndex + 1 < wordEvents.length &&
-            wordEvents[eventIndex + 1].audio_position <= elapsedMilliseconds
-          ) {
-            eventIndex += 1;
-          }
-          if (eventIndex >= 0) {
-            highlightBoundary(chunk, Math.max(0, wordEvents[eventIndex].text_position - 1));
-          }
-          highlightFrame = window.requestAnimationFrame(updateHighlight);
-        };
-
-        source.addEventListener("ended", () => {
-          if (source === activeSource) {
-            clearHighlightFrame();
-            activeSource = undefined;
-          }
-          resolve();
-        });
-        source.start();
-        updateHighlight();
-      });
+      highlightFrame = window.requestAnimationFrame(() => updateHighlight(audio, chunkIndex));
     }
 
     function setStoppedState(status: string) {
@@ -240,50 +153,66 @@
       isPaused = false;
       clearHighlightFrame();
       clearHighlight();
-      pauseButton.textContent = "Pause";
-      pauseButton.disabled = true;
-      stopButton.disabled = true;
+      activeAudio?.pause();
+      activeAudio = undefined;
+      setToggleButton("Listen", "play");
+      toggleButton.disabled = !manifest;
       statusText.textContent = status;
     }
 
-    async function readChunks(chunks: SpeechChunk[], currentRun: number) {
-      const engine = await getEngine();
-      if (currentRun === speechRun) statusText.textContent = "Reading article";
-      for (const chunk of chunks) {
-        if (currentRun !== speechRun) return;
-        const { buffer, wordEvents } = synthesizeChunk(engine, chunk);
-        await playChunk(chunk, buffer, wordEvents, currentRun);
-      }
+    function setToggleButton(label: string, state: "play" | "pause" | "loading") {
+      toggleButton.dataset.state = state;
+      toggleButton.setAttribute("aria-label", label);
+      toggleButton.title = label;
+    }
+
+    async function playChunk(index: number, currentRun: number): Promise<void> {
+      if (!manifest || currentRun !== speechRun || index >= manifest.chunks.length) return;
+      currentChunk = index;
+      const chunk = manifest.chunks[index];
+      const audio = new Audio(new URL(chunk.audio, new URL(manifestUrl, window.location.href)).href);
+      activeAudio = audio;
+      toggleButton.disabled = true;
+      setToggleButton("Loading article audio", "loading");
+      statusText.textContent = "Loading article audio…";
+
+      await new Promise<void>((resolve, reject) => {
+        audio.addEventListener("ended", () => resolve(), { once: true });
+        audio.addEventListener("error", () => reject(new Error("Audio failed to load")), { once: true });
+        audio.addEventListener("waiting", () => {
+          if (audio !== activeAudio || isPaused) return;
+          clearHighlightFrame();
+          toggleButton.disabled = true;
+          setToggleButton("Loading article audio", "loading");
+          statusText.textContent = "Loading article audio…";
+        });
+        audio.addEventListener("playing", () => {
+          if (audio !== activeAudio || isPaused) return;
+          clearHighlightFrame();
+          toggleButton.disabled = false;
+          setToggleButton("Pause", "pause");
+          statusText.textContent = "Reading article";
+          updateHighlight(audio, index);
+        });
+        void audio.play().catch(reject);
+      });
+      if (currentRun === speechRun) await playChunk(index + 1, currentRun);
     }
 
     function startReading() {
-      const chunks = getSpeechChunks();
-      if (chunks.length === 0) {
+      if (!manifest?.chunks.length) {
         statusText.textContent = "No article text available";
         return;
       }
       speechRun += 1;
       const currentRun = speechRun;
       clearHighlightFrame();
-      try {
-        activeSource?.stop();
-      } catch (_error) {
-        // The previous source has already stopped.
-      }
-      activeSource = undefined;
+      activeAudio?.pause();
+      activeAudio = undefined;
       isReading = true;
       isPaused = false;
-      pauseButton.textContent = "Pause";
-      pauseButton.disabled = false;
-      stopButton.disabled = false;
-      statusText.textContent = enginePromise
-        ? "Reading article"
-        : "Loading synchronized voice…";
 
-      const context = getAudioContext();
-      void context.resume();
-
-      void readChunks(chunks, currentRun)
+      void playChunk(0, currentRun)
         .then(() => {
           if (currentRun === speechRun) setStoppedState("Finished reading article");
         })
@@ -292,133 +221,152 @@
         });
     }
 
-    listenButton.addEventListener("click", startReading);
-
-    pauseButton.addEventListener("click", () => {
-      if (!isReading) return;
+    toggleButton.addEventListener("click", () => {
+      if (!isReading) {
+        startReading();
+        return;
+      }
 
       if (isPaused) {
-        void getAudioContext().resume();
+        void activeAudio?.play();
         isPaused = false;
-        pauseButton.textContent = "Pause";
+        setToggleButton("Pause", "pause");
         statusText.textContent = "Reading article";
+        if (activeAudio) updateHighlight(activeAudio, currentChunk);
       } else {
-        void getAudioContext().suspend();
+        activeAudio?.pause();
+        clearHighlightFrame();
         isPaused = true;
-        pauseButton.textContent = "Resume";
+        setToggleButton("Resume", "play");
         statusText.textContent = "Paused";
       }
     });
 
-    stopButton.addEventListener("click", () => {
-      speechRun += 1;
-      clearHighlightFrame();
-      void getAudioContext().resume();
-      try {
-        activeSource?.stop();
-      } catch (_error) {
-        // The source has already stopped.
-      }
-      activeSource = undefined;
-      setStoppedState("Stopped");
-    });
-
-    speedSelect.addEventListener("change", () => {
-      if (isReading) startReading();
-    });
-
-    if ("AudioContext" in window) {
-      voiceText.textContent = "eSpeak NG British English";
-      listenButton.disabled = false;
-      speedSelect.disabled = false;
-      statusText.textContent = "Ready to listen";
-    } else {
-      voiceText.textContent = "Unavailable";
-      statusText.textContent = "Text-to-speech unavailable";
-    }
+    void fetch(manifestUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error("Article audio is unavailable");
+        return response.json() as Promise<AudioManifest>;
+      })
+      .then((loadedManifest) => {
+        manifest = loadedManifest;
+        mapManifestWords();
+        voiceText.textContent = manifest.voice;
+        setToggleButton("Listen", "play");
+        toggleButton.disabled = false;
+        statusText.textContent = "Ready to listen";
+      })
+      .catch(() => {
+        setToggleButton("Listen", "play");
+        voiceText.textContent = "Unavailable";
+        statusText.textContent = "Article audio unavailable";
+      });
   }
 </script>
 
 <style>
   .article-reader {
     display: none;
-    margin: 1.5rem 0;
-    padding: 1rem 1.25rem;
-    border: 2px solid #000;
-    border-radius: 14px;
-    background: #fff;
+    align-items: center;
+    margin-right: 0.5rem;
+    vertical-align: middle;
   }
 
   :global(html.js) .article-reader {
-    display: block;
+    display: inline-flex;
   }
 
-  .article-reader-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.8rem;
-  }
-
-  h2,
-  p {
-    margin: 0;
-  }
-
-  h2 {
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .article-reader-voice,
-  .article-reader-status {
-    color: #555;
-    font-size: 0.8rem;
-  }
-
-  .article-reader-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  button,
-  select {
-    border: 1px solid #000;
-    border-radius: 4px;
-    background: #f5f5f0;
-    color: #111;
-    font: inherit;
-    font-size: 0.85rem;
+  .article-reader-details {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   button {
-    padding: 0.4rem 0.65rem;
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid #000;
+    border-radius: 50%;
+    background: transparent;
+    color: #111;
     cursor: pointer;
+    transition: background 0.15s ease;
   }
 
-  button:disabled,
-  select:disabled {
+  button:hover:not(:disabled) {
+    background: #fff;
+  }
+
+  button:focus-visible {
+    outline: 2px solid #000;
+    outline-offset: 3px;
+  }
+
+  button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }
 
-  label {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.85rem;
+  button[data-state="loading"] {
+    cursor: wait;
+    opacity: 1;
   }
 
-  select {
-    padding: 0.35rem;
+  button[data-state="loading"]::before {
+    position: absolute;
+    inset: -0.25rem;
+    border: 2px solid #168bd2;
+    border-right-color: transparent;
+    border-radius: 50%;
+    content: "";
+    animation: reader-loading 0.7s linear infinite;
   }
 
-  .article-reader-status {
-    margin-top: 0.65rem;
+  svg {
+    width: 0.5rem;
+    height: 0.625rem;
+    fill: currentColor;
+  }
+
+  :global(html.dark-mode) .article-reader svg,
+  :global(html:not(.light-mode):not(.dark-mode)) .article-reader svg {
+    filter: none;
+  }
+
+  .play-icon {
+    margin-left: 0.1rem;
+  }
+
+  .pause-icon,
+  button[data-state="pause"] .play-icon,
+  button[data-state="loading"] .play-icon {
+    display: none;
+  }
+
+  button[data-state="pause"] .pause-icon,
+  button[data-state="loading"] .pause-icon {
+    display: block;
+  }
+
+  @keyframes reader-loading {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button[data-state="loading"]::before {
+      animation-duration: 1.5s;
+    }
   }
 
   :global(#story-body .article-reader-word-active) {
@@ -428,13 +376,4 @@
     transition: background 0.08s ease;
   }
 
-  @media (max-width: 520px) {
-    .article-reader-heading {
-      display: block;
-    }
-
-    .article-reader-voice {
-      margin-top: 0.25rem;
-    }
-  }
 </style>
